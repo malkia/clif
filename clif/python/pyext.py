@@ -747,7 +747,7 @@ class Module(object):
         yield s
 
   def GenerateHeader(self, source_filename, api_header_filename, macros,
-                     is_extended_from_python, more_headers=None):
+                     is_extended_from_python=False, more_headers=None):
     """Generate header file with type conversion declarations."""
     if more_headers is None:
       more_headers = []
