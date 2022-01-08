@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
   for (int i = 1; i < argc; i++) {
     llvm::StringRef argv_i(argv[i]);
     if (!argv_i.startswith("--") && argv_i.endswith(".ipb")) {
-      input_file = argv_i;
+      input_file = std::string(argv_i);
       // llvm considers an ipb file a linker input and will complain
       // if it appears, so remove it from the list.
       memmove(argv + i, argv + i + 1, (argc - i - 1) * sizeof(char *));
