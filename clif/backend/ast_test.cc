@@ -12,9 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "clif/backend/ast.h"
+#include <string>
 
+#include "clif/backend/ast.h"
 #include "gtest/gtest.h"
+
+// For bazel builds, rely on runfiles logic from @bazel_tools//... to locate test files
+#ifndef CLIF_BACKEND_SOURCE_DIR
+#include "tools/cpp/runfiles/runfiles.h"
+#endif
 
 namespace clif {
 
@@ -23,10 +29,19 @@ using clif::TranslationUnitAST;
 class TranslationUnitASTTest : public testing::Test {
  protected:
   void SetUp() override {
-    // CLIF_BACKEND_SOURCE_DIR is a preprocessor macro set in CMakeLists.txt.
-    std::string test_src = CLIF_BACKEND_SOURCE_DIR;
+#ifndef CLIF_BACKEND_SOURCE_DIR
+    std::string run_files_error;
+    auto run_files = ::bazel::tools::cpp::runfiles::Runfiles::CreateForTest( &run_files_error );
+    ASSERT_NE(run_files, nullptr) << run_files_error;
 
-    std::string code = "#include \"" + test_src + "/test.h\"\n";
+    std::string test_src = run_files->Rlocation("clif/clif/backend/test.h");
+    ASSERT_FALSE(test_src.empty()) << "Can't find " + test_src;
+#else
+    // CLIF_BACKEND_SOURCE_DIR is a preprocessor macro set in CMakeLists.txt.
+    std::string test_src = CLIF_BACKEND_SOURCE_DIR + "/test.h";
+#endif
+
+    std::string code = "#include \"" + test_src + "\"\n";
     ast_.reset(new TranslationUnitAST());
     bool succeeded = ast_->Init(code,
                                 TranslationUnitAST::CompilerArgs(),

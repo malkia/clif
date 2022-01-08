@@ -86,16 +86,15 @@ cc_test(
     data = [
         "test.h",
     ],
-    defines = ["CLIF_BACKEND_SOURCE_DIR=\\\"clif/backend\\\""],
     deps = [
         ":ast",
-        "//devtools/build/runtime:get_runfiles_dir",
         "@com_google_absl//absl/flags:flag",
         "@com_google_googletest//:gtest_main",
         "@llvm-project//clang:ast",
         "@llvm-project//clang:ast_matchers",
         "@llvm-project//clang:frontend",
         "@llvm-project//clang:tooling",
+        "@bazel_tools//tools/cpp/runfiles",
     ],
 )
 
@@ -112,16 +111,15 @@ cc_test(
         # versioned_smart_ptr_test.h test for match and set for versioned smart pointers.
         "versioned_smart_ptr_test.h",
     ],
-    defines = ["CLIF_BACKEND_SOURCE_DIR=\\\"clif/backend\\\""],
     deps = [
         ":ast",
         ":matcher",
         ":strutil",
         "//clif/protos:ast_cc_proto",
-        "//devtools/build/runtime:get_runfiles_dir",
         "@com_google_absl//absl/flags:flag",
         "@com_google_googletest//:gtest_main",
         "@com_google_protobuf//:protobuf_headers",
         "@llvm-project//llvm:Support",
+        "@bazel_tools//tools/cpp/runfiles",
     ],
 )

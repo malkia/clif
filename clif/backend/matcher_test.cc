@@ -22,6 +22,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 
+// For bazel builds, rely on runfiles logic from @bazel_tools//... to locate test files
+#ifndef CLIF_BACKEND_SOURCE_DIR
+#include "tools/cpp/runfiles/runfiles.h"
+#endif
+
 #define PROTOBUF_NS google::protobuf
 
 namespace clif {
@@ -31,8 +36,35 @@ using clif::TranslationUnitAST;
 class ClifMatcherTest : public testing::Test {
  protected:
   void SetUp() override {
+#ifndef CLIF_BACKEND_SOURCE_DIR
+    std::string run_files_error;
+    auto run_files = ::bazel::tools::cpp::runfiles::Runfiles::CreateForTest( &run_files_error );
+    ASSERT_NE(run_files, nullptr) << run_files_error;
+
+    std::vector<std::string> file_names {
+        "another_file.h",
+        "test.h",
+        "test_clif_aux.h",
+        "test_subdir/test_clif_aux.h",
+        "versioned_smart_ptr_test.h",
+    };
+
+    for( const auto& file_name : file_names ) {
+        std::string full_file_name = std::string("clif/clif/backend/") + file_name;
+        std::string run_file_name = run_files->Rlocation( full_file_name );
+        ASSERT_FALSE(run_file_name.empty()) << "Can't find " + full_file_name;
+
+        std::string run_file_dir = run_file_name.substr(0, run_file_name.length() - file_name.size());
+        if( test_src_dir_.empty() )
+            test_src_dir_ = run_file_dir;
+
+        // We assume that all test (data) files are from the same root (test_src_dir_)
+        ASSERT_EQ(run_file_dir, test_src_dir_) << "All files must be from the same root";
+    }
+#else
     // CLIF_BACKEND_SOURCE_DIR is a preprocessor macro set in CMakeLists.txt.
     test_src_dir_ = CLIF_BACKEND_SOURCE_DIR;
+#endif
   }
 
   // We do not do matcher preparation in the SetUp method because:
