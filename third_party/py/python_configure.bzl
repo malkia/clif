@@ -283,8 +283,8 @@ def _get_python_include(repository_ctx, python_bin):
     )
     return result.stdout.splitlines()[0]
 
-def _get_python_import_lib_name(repository_ctx, python_bin):
-    """Gets Python import library name (pythonXY.lib) on Windows."""
+def _get_python_import_lib_names(repository_ctx, python_bin):
+    """Gets Python import library names (pythonXY.lib and pythonXY_d.lib) on Windows."""
     result = _execute(
         repository_ctx,
         [
@@ -292,13 +292,15 @@ def _get_python_import_lib_name(repository_ctx, python_bin):
             "-c",
             "import sys; " +
             'print("python{}{}.lib".format(' +
-            "sys.version_info.major, sys.version_info.minor))",
+            "sys.version_info.major, sys.version_info.minor)); " +
+            'print("python{}{}_d.lib".format(' +
+            "sys.version_info.major, sys.version_info.minor))"
         ],
         error_msg = "Problem getting python import library.",
         error_details = ("Is the Python binary path set up right? " +
                          "(See {}.) ").format(_PYTHON_BIN_PATH),
     )
-    return result.stdout.splitlines()[0]
+    return result.stdout.splitlines()
 
 def _get_python_ldlibrary(repository_ctx, python_bin):
     """Get libpython.so path."""
@@ -331,21 +333,33 @@ def _create_local_python_repository(repository_ctx):
         "python_include",
     )
     python_import_lib_genrule = ""
+    python_import_lib_windows_dbg_genrule = ""
     python_import_lib_src = ""
     python_import_lib_name = ""
 
     # To build Python C/C++ extension on Windows, we need to link to python
-    # import library pythonXY.lib
+    # import library pythonXY.lib or pythonXY_d.lib
     # See https://docs.python.org/3/extending/windows.html
     if _is_windows(repository_ctx):
         python_include = _norm_path(python_include)
-        python_import_lib_name = _get_python_import_lib_name(
+        python_import_lib_names = _get_python_import_lib_names(
             repository_ctx,
             python_bin,
         )
-        python_import_lib_src = "{}/libs/{}".format(
-            python_include.rsplit("/", 1)[0],
-            python_import_lib_name,
+        python_root = python_include.rsplit("/", 1)[0]
+        python_import_lib_srcs = [
+            "{}/libs/{}".format(python_root, python_import_lib_names[0]),
+            "{}/libs/{}".format(python_root, python_import_lib_names[1]),
+        ]
+        python_import_lib_src = python_import_lib_srcs[0]
+        python_import_lib_name = python_import_lib_names[0]
+        python_import_lib_windows_dbg_genrule = _symlink_genrule_for_dir(
+            repository_ctx,
+            None,
+            "",
+            "python_import_lib_windows_dbg",
+            [python_import_lib_srcs[1]],
+            [python_import_lib_names[1]],
         )
     else:
         python_import_lib_src = _get_python_ldlibrary(repository_ctx, python_bin)
@@ -362,6 +376,7 @@ def _create_local_python_repository(repository_ctx):
         "%{PYTHON_RUNTIME_PAIR}": python_runtime_pair,
         "%{PYTHON_INCLUDE_GENRULE}": python_include_rule,
         "%{PYTHON_IMPORT_LIB_GENRULE}": python_import_lib_genrule,
+        "%{PYTHON_IMPORT_LIB_WINDOWS_DBG_GENRULE}": python_import_lib_windows_dbg_genrule,
     })
 
 def _create_remote_python_repository(repository_ctx, remote_config_repo):
