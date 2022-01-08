@@ -16,7 +16,13 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
+
+#ifdef _MSC_VER
+// TODO(malkia): Move this in the BUILD file.
+#pragma comment(lib,"version.lib")
+#else
 #include <unistd.h>
+#endif
 
 #include "clif/backend/strutil.h"
 #include "clang/AST/ASTContext.h"
